@@ -156,10 +156,12 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 - `vite.config.ts`: the build no longer opens its bundle report in a browser.
 - `supabase/functions` (removed), and their sections in `supabase/config.toml` and `config.e2e.toml`. Tofu would
   otherwise deploy them for an account its `appFunctions` switch admits, without the settings they read.
-- `.env.development`, `.env.e2e`, `supabase/signing_keys.json` (removed): the local stack's publishable key,
-  service-role token and private signing key, and upstream's own Postmark inbound address. `npx supabase status`
-  prints a local stack's keys; upstream's end-to-end tests (`make` targets that copy `signing_keys.json`) need them
-  put back.
+- `.env.development` and `.env.e2e` (kept, their values emptied, each with a Tofu comment): `VITE_SB_PUBLISHABLE_KEY=`
+  in both (the local stack's publishable key), `SERVICE_ROLE_KEY=` in `.env.e2e` (its service-role token) and
+  `VITE_INBOUND_EMAIL=` in `.env.development` (upstream's own Postmark inbound address). `supabase/signing_keys.json`
+  (removed): the local stack's private signing key. `supabase/functions/.env` went with `supabase/functions` (above):
+  the functions' local Postmark webhook settings and keys. `npx supabase status` prints a local stack's keys;
+  upstream's end-to-end tests (`make` targets that copy `signing_keys.json`) need them put back.
 - `.github/workflows` (removed): upstream's CI and deployment workflows.
 - `doc/` (removed): upstream's documentation website, a separate Astro project a copy neither builds nor serves. One
   of its code samples (a widget that signs in with a password at `https://<instance_url>/auth/v1/token`) reads to
