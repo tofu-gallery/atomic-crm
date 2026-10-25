@@ -21,8 +21,8 @@ gallery copies.
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_SUPABASE_ANON_KEY` (the public key); the app reads
   the URL and the publishable key (upstream's own name for the key, `VITE_SB_PUBLISHABLE_KEY`, still comes first when
   it is set). It reads none of the server-side names (`DATABASE_URL`, `SUPABASE_CA_CERT`).
-- **Migrations.** Tofu applies `supabase/migrations` before each build (the build itself applies nothing): 30 files,
-  upstream's 29 and one of Tofu's, in file-name order, each once, recorded in the Supabase CLI's own ledger. Every
+- **Migrations.** Tofu applies `supabase/migrations` before each build (the build itself applies nothing): 31 files,
+  upstream's 29 and two of Tofu's, in file-name order, each once, recorded in the Supabase CLI's own ledger. Every
   table they make has row-level security in the same file, and they grant the Data API's roles what the pages use
   themselves, so Supabase's change of 2026-10-30 (new tables closed to the Data API) changes nothing here.
   `supabase/schemas` is upstream's declarative copy of the same schema, which Tofu does not read.
@@ -54,6 +54,12 @@ gallery copies.
   first password. With a password they sign in at once; without one the page asks the auth service to send them a
   password email, and they can always use "Forgot password?" on the sign-in page. Upstream emailed an invitation from
   an Edge Function instead.
+- **The plan's number of people applies to the Users page too.** Each Tofu plan has room for a number of people in
+  each app (5 on Free, 10 on Starter, 50 on Pro), and Tofu holds it wherever an account is made. The Users page makes
+  its accounts in the database, where the auth service's check never sees them, so `tofu_add_sale` asks Tofu's own
+  check (`tofu_hosting.before_user_created`, which Tofu writes into the database) before it makes a new account, and
+  when the app is full the page shows the check's sentence ("This app is full: …") and adds nobody. Removing someone
+  from the app's People card in Tofu, or a plan with more room, makes a place.
 - **Disabling a user** (an administrator, on the Users page) bans their account in the auth service, so they cannot
   sign in until they are enabled again; a page they already have open keeps its sign-in for up to an hour.
 - **Mail.** Password emails, and the confirmation of a new address where the database asks for one, need the app's
@@ -92,6 +98,11 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
   - Upstream's four note-attachment triggers and their two functions are dropped: they called
     `delete_note_attachments` through `pg_net`, and with no `pg_net` every note deletion would fail.
   - `get_user_id_by_email`, which only the `users` function used with the server key, is closed to the Data API roles.
+- `supabase/migrations/20261025220000_tofu_add_sale_room_check.sql` (new): `tofu_add_sale` again, unchanged but for
+  one step before it writes a new account — it takes the guard's lock and asks Tofu's check of the plan's number of
+  people (`tofu_hosting.before_user_created(jsonb)`, only when Tofu has written it; Tofu writes it as `postgres`, the
+  role these files run as, so the function may run it), and raises the check's own message when it answers with an
+  error. A new file rather than a change to the one before, because Tofu applies each file once.
 - `supabase/migrations/20260128165057_sso_handling.sql`: its first line created the `pgjwt` extension, which nothing
   uses and newer Supabase databases no longer offer. `20260304104600_note_attachments_trigger.sql` and
   `20260309112831_fix_security_warnings.sql`: they no longer create `pg_net` (each file has a note at the point).
