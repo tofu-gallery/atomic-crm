@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Atomic CRM</title>
+  </head>
+  <body>
+    <!--
+      Tofu: the sign-in emails Tofu writes into the app's auth service link to <app>/auth/confirm?token_hash=…&type=….
+      The app routes by the part after #, so this page hands the same parameters to its #/auth-confirm page, which
+      confirms them once the person presses Continue. Nothing is confirmed here.
+    -->
+    <noscript>Atomic CRM needs JavaScript to confirm this link.</noscript>
+    <script>
+      window.location.replace(
+        window.location.pathname.replace(/auth\/confirm\/?(index\.html)?$/, "") +
+          "#/auth-confirm" +
+          window.location.search,
+      );
+    </script>
+  </body>
+</html>

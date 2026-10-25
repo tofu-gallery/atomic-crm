@@ -339,6 +339,8 @@ $$;
 
 -- Move pg_net extension to extensions schema (security requirement)
 -- pg_net doesn't support ALTER EXTENSION SET SCHEMA, so drop and recreate
-DROP EXTENSION IF EXISTS pg_net CASCADE;
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+-- Tofu (2026-10-25): left out. On Tofu nothing uses pg_net (20260304104600_note_attachments_trigger.sql no longer
+-- creates it), so there is nothing to move, and creating it here would install it (TOFU.md, "What we changed").
+-- DROP EXTENSION IF EXISTS pg_net CASCADE;
+-- CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 

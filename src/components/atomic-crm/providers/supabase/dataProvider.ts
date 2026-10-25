@@ -20,15 +20,47 @@ import type {
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { ATTACHMENTS_BUCKET } from "../commons/attachments";
 import { getIsInitialized } from "./authProvider";
-import { getSupabaseClient } from "./supabase";
+import { getSupabaseClient, supabasePublishableKey } from "./supabase";
 
 const getBaseDataProvider = () =>
   supabaseDataProvider({
     instanceUrl: import.meta.env.VITE_SUPABASE_URL,
-    apiKey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+    apiKey: supabasePublishableKey as string,
     supabaseClient: getSupabaseClient(),
     sortOrder: "asc,desc.nullslast" as any,
   });
+
+// Tofu: Tofu deploys no Supabase Edge Function, so the user and merge methods below call the database functions
+// of supabase/migrations/20261025210000_tofu_without_edge_functions.sql instead. Their errors carry the code the
+// pages know (email_taken, ...) as the hint, and the address as the detail.
+const salesError = (error: any, fallbackMessage: string) =>
+  Object.assign(new Error(error?.message || fallbackMessage), {
+    code: error?.hint || undefined,
+    email: error?.details || undefined,
+  });
+
+// Tofu: upstream removed a note's files from storage in its `delete_note_attachments` Edge Function, called by
+// database triggers; here the page removes them once the note is deleted or saved without them.
+const NOTE_RESOURCES = ["contact_notes", "deal_notes"];
+const attachmentPaths = (attachments: unknown): string[] =>
+  Array.isArray(attachments)
+    ? [
+        ...new Set(
+          attachments
+            .map((attachment) => (attachment as RAFile | null)?.path)
+            .filter((path): path is string => typeof path === "string" && path.trim() !== ""),
+        ),
+      ]
+    : [];
+const removeNoteFiles = async (paths: string[]) => {
+  if (paths.length === 0) return;
+  const { error } = await getSupabaseClient()
+    .storage.from(ATTACHMENTS_BUCKET)
+    .remove(paths);
+  if (error) {
+    console.error("delete_note_attachments.error", error);
+  }
+};
 
 const processCompanyLogo = async (params: any) => {
   const logo = params.data.logo;
@@ -88,6 +120,27 @@ const getDataProviderWithCustomMethods = () => {
 
       return baseDataProvider.getOne(resource, params);
     },
+    async update(resource: string, params: any) {
+      const result = await baseDataProvider.update(resource, params);
+      if (NOTE_RESOURCES.includes(resource)) {
+        const kept = new Set(attachmentPaths(result.data?.attachments));
+        await removeNoteFiles(
+          attachmentPaths(params.previousData?.attachments).filter(
+            (path) => !kept.has(path),
+          ),
+        );
+      }
+      return result;
+    },
+    async delete(resource: string, params: any) {
+      const result = await baseDataProvider.delete(resource, params);
+      if (NOTE_RESOURCES.includes(resource)) {
+        await removeNoteFiles(
+          attachmentPaths((result.data ?? params.previousData)?.attachments),
+        );
+      }
+      return result;
+    },
 
     async signUp({ email, password, first_name, last_name }: SignUpData) {
       const response = await getSupabaseClient().auth.signUp({
@@ -116,29 +169,29 @@ const getDataProviderWithCustomMethods = () => {
       };
     },
     async salesCreate(body: SalesFormData) {
-      const { data, error } = await getSupabaseClient().functions.invoke<{
-        data: Sale;
-      }>("users", {
-        method: "POST",
-        body,
+      const { data, error } = await getSupabaseClient().rpc("tofu_add_sale", {
+        email: body.email,
+        first_name: body.first_name,
+        last_name: body.last_name,
+        administrator: body.administrator ?? false,
+        disabled: body.disabled ?? false,
+        password: body.password || null,
       });
 
       if (!data || error) {
         console.error("salesCreate.error", error);
-        const errorDetails = await (async () => {
-          try {
-            return (await error?.context?.json()) ?? {};
-          } catch {
-            return {};
-          }
-        })();
-        throw Object.assign(
-          new Error(errorDetails?.message || "Failed to create the user"),
-          { code: errorDetails?.code, email: errorDetails?.email },
-        );
+        throw salesError(error, "Failed to create the user");
       }
 
-      return data.data;
+      if (!body.password) {
+        // Upstream's function emailed an invitation; here the auth service sends its password email, as
+        // "Forgot password?" does. Mail needs the app's sign-in set up (TOFU.md), so a refusal is not an error.
+        await getSupabaseClient()
+          .auth.resetPasswordForEmail(body.email.trim().toLowerCase())
+          .catch(() => undefined);
+      }
+
+      return data as Sale;
     },
     async salesUpdate(
       id: Identifier,
@@ -154,57 +207,41 @@ const getDataProviderWithCustomMethods = () => {
         disabled,
       } = data;
 
-      const { data: updatedData, error } =
-        await getSupabaseClient().functions.invoke<{
-          data: Sale;
-        }>("users", {
-          method: "PATCH",
-          body: {
-            sales_id: id,
-            email,
-            secondary_emails,
-            first_name,
-            last_name,
-            administrator,
-            disabled,
-            avatar,
-          },
-        });
+      const { data: updatedData, error } = await getSupabaseClient().rpc(
+        "tofu_update_sale",
+        {
+          sales_id: id,
+          email: email ?? null,
+          secondary_emails: secondary_emails ?? null,
+          first_name: first_name ?? null,
+          last_name: last_name ?? null,
+          avatar: avatar ?? null,
+          administrator: administrator ?? null,
+          disabled: disabled ?? null,
+        },
+      );
 
       if (!updatedData || error) {
         console.error("salesUpdate.error", error);
-        const errorDetails = await (async () => {
-          try {
-            return (await error?.context?.json()) ?? {};
-          } catch {
-            return {};
-          }
-        })();
-        throw Object.assign(
-          new Error(
-            errorDetails?.message || "Failed to update account manager",
-          ),
-          { code: errorDetails?.code, email: errorDetails?.email },
-        );
+        throw salesError(error, "Failed to update account manager");
       }
 
-      return updatedData.data;
+      return updatedData as Sale;
     },
-    async updatePassword(id: Identifier) {
-      const { data: passwordUpdated, error } =
-        await getSupabaseClient().functions.invoke<boolean>("update_password", {
-          method: "PATCH",
-          body: {
-            sales_id: id,
-          },
-        });
+    async updatePassword(_id: Identifier) {
+      // Upstream's `update_password` function asked the auth service for a password email for the signed-in user.
+      const { data: dataSession } = await getSupabaseClient().auth.getSession();
+      const email = dataSession?.session?.user?.email;
+      const { error } = email
+        ? await getSupabaseClient().auth.resetPasswordForEmail(email)
+        : { error: new Error("Not signed in") };
 
-      if (!passwordUpdated || error) {
+      if (error) {
         console.error("update_password.error", error);
         throw new Error("Failed to update password");
       }
 
-      return passwordUpdated;
+      return true;
     },
     async unarchiveDeal(deal: Deal) {
       // get all deals where stage is the same as the deal to unarchive
@@ -251,20 +288,17 @@ const getDataProviderWithCustomMethods = () => {
       return data ?? [];
     },
     async mergeContacts(sourceId: Identifier, targetId: Identifier) {
-      const { data, error } = await getSupabaseClient().functions.invoke(
-        "merge_contacts",
-        {
-          method: "POST",
-          body: { loserId: sourceId, winnerId: targetId },
-        },
-      );
+      const { data, error } = await getSupabaseClient().rpc("merge_contacts", {
+        loser_id: sourceId,
+        winner_id: targetId,
+      });
 
       if (error) {
         console.error("merge_contacts.error", error);
         throw new Error("Failed to merge contacts");
       }
 
-      return data;
+      return { success: true, winnerId: data ?? targetId };
     },
     async getConfiguration(): Promise<ConfigurationContextValue> {
       const { data } = await baseDataProvider.getOne("configuration", {
@@ -403,7 +437,7 @@ export const getDataProvider = () => {
   if (import.meta.env.VITE_SUPABASE_URL === undefined) {
     throw new Error("Please set the VITE_SUPABASE_URL environment variable");
   }
-  if (import.meta.env.VITE_SB_PUBLISHABLE_KEY === undefined) {
+  if (supabasePublishableKey === undefined) {
     throw new Error(
       "Please set the VITE_SB_PUBLISHABLE_KEY environment variable",
     );

@@ -254,25 +254,29 @@ const ProfileForm = ({
           </CardContent>
         </Card>
       )}
-      <Card>
-        <CardContent>
-          <div className="space-y-4 justify-between">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              {translate("crm.profile.mcp.title", {
-                _: "MCP Server",
-              })}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {translate("crm.profile.mcp.description", {
-                _: "Use this URL to connect your AI assistant to your CRM data via the Model Context Protocol (MCP).",
-              })}
-            </p>
-            <CopyPaste
-              value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mcp`}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tofu: the MCP server is a Supabase Edge Function, which Tofu does not deploy, so the address is shown
+          only where VITE_MCP_SERVER says one runs. */}
+      {import.meta.env.VITE_MCP_SERVER === "true" && (
+        <Card>
+          <CardContent>
+            <div className="space-y-4 justify-between">
+              <h2 className="text-xl font-semibold text-muted-foreground">
+                {translate("crm.profile.mcp.title", {
+                  _: "MCP Server",
+                })}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {translate("crm.profile.mcp.description", {
+                  _: "Use this URL to connect your AI assistant to your CRM data via the Model Context Protocol (MCP).",
+                })}
+              </p>
+              <CopyPaste
+                value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mcp`}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

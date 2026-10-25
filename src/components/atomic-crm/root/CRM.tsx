@@ -24,6 +24,7 @@ import { Layout } from "../layout/Layout";
 import { MobileLayout } from "../layout/MobileLayout";
 import { SignupPage } from "../login/SignupPage";
 import { ConfirmationRequired } from "../login/ConfirmationRequired";
+import { AuthConfirmPage } from "../login/AuthConfirmPage";
 import { ImportPage } from "../misc/ImportPage";
 import { ChangelogPage } from "../misc/ChangelogPage";
 import {
@@ -254,6 +255,7 @@ const DesktopAdmin = (
           element={<ForgotPasswordPage />}
         />
         <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
+        <Route path={AuthConfirmPage.path} element={<AuthConfirmPage />} />
       </CustomRoutes>
 
       <CustomRoutes>
@@ -329,6 +331,7 @@ const MobileAdmin = (
             element={<ForgotPasswordPage />}
           />
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
+          <Route path={AuthConfirmPage.path} element={<AuthConfirmPage />} />
         </CustomRoutes>
         <CustomRoutes>
           <Route

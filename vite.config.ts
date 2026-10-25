@@ -16,7 +16,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     visualizer({
-      open: process.env.NODE_ENV !== "CI",
+      // Tofu: upstream opened the bundle report in a browser after every build that was not CI's; a hosting build
+      // has no browser to open, so the report is only written.
+      open: false,
       filename: "./dist/stats.html",
     }),
     createHtmlPlugin({
@@ -45,8 +47,11 @@ export default defineConfig({
           "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
             process.env.VITE_SUPABASE_URL,
           ),
+          // Tofu: a managed database names the public key VITE_SUPABASE_PUBLISHABLE_KEY (and VITE_SUPABASE_ANON_KEY).
           "import.meta.env.VITE_SB_PUBLISHABLE_KEY": JSON.stringify(
-            process.env.VITE_SB_PUBLISHABLE_KEY,
+            process.env.VITE_SB_PUBLISHABLE_KEY ||
+              process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+              process.env.VITE_SUPABASE_ANON_KEY,
           ),
           "import.meta.env.VITE_INBOUND_EMAIL": JSON.stringify(
             process.env.VITE_INBOUND_EMAIL,

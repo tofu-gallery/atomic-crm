@@ -130,6 +130,10 @@ export const getAuthProvider = (): AuthProvider => {
       ) {
         return;
       }
+      // Tofu: users are confirming a link from a sign-in email (AuthConfirmPage), nothing to do
+      if (window.location.hash.includes("#/auth-confirm")) {
+        return;
+      }
 
       const isInitialized = await getIsInitialized();
 

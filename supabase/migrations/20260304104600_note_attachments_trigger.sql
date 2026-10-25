@@ -1,6 +1,9 @@
 -- Deletes attachment files from storage when note attachments are removed,
 -- either by deleting a note or by updating a note attachments list.
-CREATE EXTENSION IF NOT EXISTS pg_net;
+-- Tofu (2026-10-25): upstream created the `pg_net` extension here, for the triggers below to call the
+-- `delete_note_attachments` Edge Function. Tofu deploys no Edge Function, so the extension is not created, and
+-- 20261025210000_tofu_without_edge_functions.sql drops these triggers; the app removes the files itself
+-- (TOFU.md, "What we changed").
 
 DO $migration$
 BEGIN

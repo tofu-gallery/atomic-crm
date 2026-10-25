@@ -289,12 +289,15 @@ export const frenchCrmMessages = {
         secondary_emails: "E-mails secondaires",
         administrator: "Admin",
         disabled: "Désactivé",
+        password: "Mot de passe",
       },
       create: {
         error:
           "Une erreur s'est produite lors de la création de l'utilisateur.",
+        password_help:
+          "Facultatif. Donnez-le-lui pour qu'il puisse se connecter tout de suite, sans attendre d'e-mail.",
         success:
-          "Utilisateur créé. Ils recevront prochainement un email pour définir leur mot de passe.",
+          "Utilisateur créé. Il se connecte avec le mot de passe que vous lui avez donné, ou en choisit un avec « Mot de passe oublié ? » sur la page de connexion.",
         title: "Créer un nouvel utilisateur",
       },
       edit: {
@@ -373,6 +376,16 @@ export const frenchCrmMessages = {
     auth: {
       first_name: "Prénom",
       last_name: "Nom",
+      confirm: {
+        button: "Continuer",
+        description:
+          "Appuyez sur Continuer pour terminer ce que l'e-mail vous demandait.",
+        failed:
+          "Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel e-mail.",
+        invalid:
+          "Ce lien est incomplet. Ouvrez le lien entier depuis l'e-mail.",
+        title: "Confirmez que c'est vous",
+      },
       confirm_password: "Confirmer le mot de passe",
       confirmation_required:
         "Veuillez suivre le lien que nous venons de vous envoyer par email pour confirmer votre compte.",

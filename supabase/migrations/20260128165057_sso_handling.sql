@@ -1,4 +1,5 @@
-create extension if not exists "pgjwt" with schema "extensions";
+-- Tofu (2026-10-25): upstream's first line created the `pgjwt` extension, which nothing in the schema uses and which
+-- newer Supabase databases no longer offer, so this file failed there. It is left out (TOFU.md, "What we changed").
 
 alter table "public"."sales" alter column "first_name" set default 'Pending'::text;
 

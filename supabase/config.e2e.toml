@@ -83,7 +83,7 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Development signing keys
-signing_keys_path = "./signing_keys.json"
+# Tofu: upstream named its committed local signing key here (signing_keys.json, removed); the CLI then uses its own.
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -156,13 +156,5 @@ s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
 
-[functions.merge_contacts]
-verify_jwt = false
-[functions.delete_note_attachments]
-verify_jwt = false
-[functions.postmark]
-verify_jwt = false
-[functions.update_password]
-verify_jwt = false
-[functions.users]
-verify_jwt = false
+# Tofu: upstream configured its Edge Functions here (merge_contacts, delete_note_attachments, postmark,
+# update_password, users, mcp). Tofu deploys none, and their work is done in the database and the app (TOFU.md).

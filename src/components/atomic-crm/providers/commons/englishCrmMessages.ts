@@ -285,11 +285,14 @@ export const englishCrmMessages = {
         secondary_emails: "Secondary emails",
         administrator: "Admin",
         disabled: "Disabled",
+        password: "Password",
       },
       create: {
         error: "An error occurred while creating the user.",
+        password_help:
+          "Optional. Give it to them so they can sign in at once, without waiting for an email.",
         success:
-          "User created. They will soon receive an email to set their password.",
+          "User created. They sign in with the password you gave them, or set one with “Forgot password?” on the sign-in page.",
         title: "Create a new user",
       },
       edit: {
@@ -368,6 +371,14 @@ export const englishCrmMessages = {
     auth: {
       first_name: "First name",
       last_name: "Last name",
+      confirm: {
+        button: "Continue",
+        description: "Press Continue to finish what the email asked for.",
+        failed:
+          "This link has expired or was already used. Ask for a new email.",
+        invalid: "This link is incomplete. Open the whole link from the email.",
+        title: "Confirm it's you",
+      },
       confirm_password: "Confirm password",
       confirmation_required:
         "Please follow the link we just sent you by email to confirm your account.",

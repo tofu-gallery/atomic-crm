@@ -551,6 +551,10 @@ const InboundEmailSection = () => {
 const McpServerSection = () => {
   const translate = useTranslate();
 
+  // Tofu: the MCP server is a Supabase Edge Function, which Tofu does not deploy, so the address is shown only
+  // where VITE_MCP_SERVER says one runs.
+  if (import.meta.env.VITE_MCP_SERVER !== "true") return null;
+
   return (
     <div>
       <SectionLabel>
