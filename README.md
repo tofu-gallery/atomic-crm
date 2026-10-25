@@ -65,7 +65,7 @@ If you need debug the backend, you can access the following services:
 
 ## Documentation
 
-The user and developer documentation for this project is available [in the `doc/` directory](./doc/). You can also read it online at [https://marmelab.com/atomic-crm/doc/](https://marmelab.com/atomic-crm/doc/).
+The user and developer documentation for this project is available online at [https://marmelab.com/atomic-crm/doc/](https://marmelab.com/atomic-crm/doc/). (Tofu: upstream keeps its source in a `doc/` directory, which this fork leaves out; see TOFU.md.)
 
 ## Testing Changes
 

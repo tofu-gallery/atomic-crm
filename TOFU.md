@@ -108,7 +108,12 @@ browser, and they were removed:
   prints a local stack's keys; upstream's end-to-end tests (`make` targets that copy `signing_keys.json`) need them
   put back.
 - `.github/workflows` (removed): upstream's CI and deployment workflows.
-- `README.md`: one line at the top naming this fork.
+- `doc/` (removed): upstream's documentation website, a separate Astro project a copy neither builds nor serves. One
+  of its code samples (a widget that signs in with a password at `https://<instance_url>/auth/v1/token`) reads to
+  Tofu's safety check as a page sending a password to another site, which stops a deploy. The documentation is at
+  [marmelab.com/atomic-crm/doc](https://marmelab.com/atomic-crm/doc/).
+- `README.md`: one line at the top naming this fork, and its Documentation section points at the published
+  documentation instead of `doc/`.
 
 ## What works differently on Tofu
 
