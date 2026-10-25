@@ -1,5 +1,8 @@
 # Atomic CRM
 
+> This is Tofu's fork of [marmelab/atomic-crm](https://github.com/marmelab/atomic-crm), changed only as far as
+> running on Tofu needs. [TOFU.md](TOFU.md) says what changed, and why.
+
 A full-featured CRM built with React, shadcn-admin-kit, and Supabase.
 
 <https://github.com/user-attachments/assets/0d7554b5-49ef-41c6-bcc9-a76214fc5c99>
