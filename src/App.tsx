@@ -31,6 +31,8 @@ import { CRM } from "@/components/atomic-crm/root/CRM";
  *    />
  * );
  */
-const App = () => <CRM />;
+// Tofu: upstream's CRM reports the address of every production copy to marmelab
+// (atomic-crm-telemetry.marmelab.com). A copy made on Tofu does not.
+const App = () => <CRM disableTelemetry />;
 
 export default App;
