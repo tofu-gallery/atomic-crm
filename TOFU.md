@@ -15,8 +15,8 @@ gallery copies.
 
 - **Preset** `vite`, **root folder** the repository root, on Tofu's server hosting (it has a database). The pages
   are a finished build; nothing runs on a server per request.
-- **Install** `npm ci` (from `package-lock.json`; upstream's `prepare` script runs `husky`, which finds no `.git` and
-  does nothing). **Build** `npm run build`, which is `tsc && vite build`. **Output** `dist`.
+- **Install** with npm from `package-lock.json` (checked here with `npm ci`; upstream's `prepare` script runs `husky`,
+  which finds no `.git` and does nothing). **Build** `npm run build`, which is `tsc && vite build`. **Output** `dist`.
 - **Database.** Tofu's managed database, created with the first deploy. For a Vite app Tofu writes
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_SUPABASE_ANON_KEY` (the public key); the app reads
   the URL and the publishable key (upstream's own name for the key, `VITE_SB_PUBLISHABLE_KEY`, still comes first when
@@ -27,8 +27,9 @@ gallery copies.
   themselves, so Supabase's change of 2026-10-30 (new tables closed to the Data API) changes nothing here.
   `supabase/schemas` is upstream's declarative copy of the same schema, which Tofu does not read.
 - **Public settings.** None is needed; the gallery saves none. Optional, all upstream's but the first:
-  - `VITE_MCP_SERVER` = `true` shows the address of the MCP server on the profile page, for a copy whose database
-    runs upstream's `mcp` Edge Function somewhere (Tofu deploys none, so leave it unset).
+  - `VITE_MCP_SERVER` = `true` shows the address of upstream's MCP server (`<database>/functions/v1/mcp`) on the
+    profile page. That server is an Edge Function, which Tofu does not deploy and this fork no longer carries, so leave
+    it unset.
   - `VITE_ATTACHMENTS_BUCKET` names the Storage bucket for attachments and pictures (`attachments`, which the first
     migration makes).
   - `VITE_INBOUND_EMAIL`, `VITE_GOOGLE_WORKPLACE_DOMAIN`, `VITE_DISABLE_EMAIL_PASSWORD_AUTHENTICATION`: inbound email
@@ -67,9 +68,9 @@ gallery copies.
 
 ## What we changed, and why
 
-Tofu deploys no Supabase Edge Function for a copy, and upstream called six of them (`users`, `update_password`,
-`merge_contacts`, `delete_note_attachments`, `postmark` and `mcp`), so their work moved into the database and the
-browser, and they were removed:
+Tofu deploys no Supabase Edge Function for a copy. Upstream has six: `users`, `update_password` and `merge_contacts`,
+which the pages call; `delete_note_attachments`, which database triggers call; `postmark` (inbound email) and `mcp`
+(a server for AI assistants). The first four's work moved into the database and the browser, and all six were removed:
 
 - `supabase/migrations/20261025210000_tofu_without_edge_functions.sql` (new):
   - `tofu_guard_new_account()`, a `before insert` trigger on `auth.users`: the sign-up rule above. It takes an
@@ -138,7 +139,8 @@ browser, and they were removed:
 - "Atomic CRM", its name and logo (`public/logos/logo_atomic_crm.svg`, the favicon and app icons) are marmelab's.
   The Inter font comes from `@fontsource-variable/inter` (SIL Open Font License). The demo mode's sample pictures are
   loaded from marmelab's site and are not part of a copy's pages.
-- `npm audit` was not run; `npm ci` installed 1,107 packages from upstream's lockfile.
+- `npm audit` was not run; `npm ci` installed 1,107 packages from upstream's lockfile, for which GitHub's Dependabot
+  lists 8 alerts on this fork's `main` (4 high), not reviewed here.
 
 ## Verification
 
@@ -170,17 +172,24 @@ Run on 2026-10-25 on macOS, Node.js 22.22.3, npm 10.9.8, with nothing outward: n
    was deleted; `merge_contacts` through the Data API merged two contacts and their tasks; `global_search` answered.
 4. **The built app in headless Chromium** (Playwright 1.64, `--use-mock-keychain --use-angle=swiftshader
    --enable-unsafe-swiftshader`, service workers off) against 127.0.0.1 only: `dist` served the way static hosting
-   serves it (files and a folder's `index.html`; `/` and `/auth/confirm` answered 200), and the page's auth-service,
-   Data API and Storage calls answered by a local stand-in over the same PGlite database, each query run as the role
+   serves it (files and a folder's `index.html`; `/` and `/auth/confirm` answered 200), and the page's auth-service
+   and Data API calls answered by a local stand-in over the same PGlite database, each query run as the role
    the real service uses with the person's claims, so the database's grants, policies and triggers decided every
-   answer (14 checks, all passed): a new copy opened on the first-user page; Mike made the first account and was signed
+   answer (13 checks, all passed): a new copy opened on the first-user page; Mike made the first account and was signed
    in as the administrator; a contact made in the page was stored and listed again; a sign-up sent straight to the auth
    service was refused; the Users page added Frank with a first password; Frank signed in with it, saw the contacts and
    was sent to access-denied from the user form; a password-email link in Tofu's shape (`/auth/confirm?token_hash=…&type=recovery`)
    reached `#/auth-confirm`, and Continue led to the set-password page, which set his new password. No page error, no
    request outside 127.0.0.1, no Edge Function call.
-5. **Tofu's own checks** on the pushed branch and the tag: the gallery's shelf check (Tofu's GitHub import, the static
-   lane's predicates and the safety check) — its output is in the pin's report.
+5. **Tofu's own checks** on the pushed branch at `19163e1` (the commit after it changes only this file): the gallery's
+   shelf check (Tofu's GitHub import, the static lane's predicates and the safety check) said `safety ok (4 findings)`
+   and 488 of 500 published files, not on the static lane (a Vite app with an environment file, on server hosting
+   anyway for its database). Before `doc/` was left out it said `SAFETY BLOCKS tripwire:credential-form-off-origin`.
+   The four findings are medium and block nothing: `site_url` and a redirect address on `localhost` in upstream's local
+   Supabase configs and a test, and upstream's `public/auth-callback.html` putting the sign-in token into the app's own
+   `#/auth-callback` address on the same site.
+6. **Pictures** for the gallery, taken in the same browser run at 1200×750 (twice the pixels), light theme, with the
+   sample content of a two-person design studio: the deals board, the contacts list and a contact's page.
 
 ## What only a real deploy can verify
 
