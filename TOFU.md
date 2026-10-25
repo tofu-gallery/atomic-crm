@@ -45,6 +45,15 @@ gallery copies.
   choose) until your account exists, or add your own address from the app's People card in Tofu before anyone opens
   it — that account becomes the administrator, and you set its password with "Forgot password?" (which needs
   sign-in mail, below).
+- **If someone else makes the first account, it cannot simply be undone.** The database makes the administrator the
+  moment the account exists, before any confirmation, so even a sign-up with a made-up address takes the place, and
+  after it the database refuses every new sign-up (below). That person can then read and change everything in the CRM.
+  Tofu's People card cannot remove them: the CRM's user record points at the account with no rule for removing it
+  (`sales.user_id` in upstream's first migration), so a removal there answers "blocked". The owner can still get in by
+  adding their own address from the People card, but only as an ordinary user, who cannot disable anyone; making the
+  owner the administrator again and shutting the other person out takes a change to the database that a coding agent
+  makes (a migration that sets `administrator` on the owner's row and disables the other). So open a new copy before
+  anyone else can.
 - **After the first account, the database refuses every new account** except the ones an administrator adds on the
   app's Users page, the ones the owner adds from Tofu's People card, and single sign-on accounts the auth service's
   administrator set up. Upstream's pages already allowed only that, but its auth service accepted any sign-up sent to
