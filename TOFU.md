@@ -21,8 +21,8 @@ gallery copies.
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_SUPABASE_ANON_KEY` (the public key); the app reads
   the URL and the publishable key (upstream's own name for the key, `VITE_SB_PUBLISHABLE_KEY`, still comes first when
   it is set). It reads none of the server-side names (`DATABASE_URL`, `SUPABASE_CA_CERT`).
-- **Migrations.** Tofu applies `supabase/migrations` before each build (the build itself applies nothing): 31 files,
-  upstream's 29 and two of Tofu's, in file-name order, each once, recorded in the Supabase CLI's own ledger. Every
+- **Migrations.** Tofu applies `supabase/migrations` before each build (the build itself applies nothing): 32 files,
+  upstream's 29 and three of Tofu's, in file-name order, each once, recorded in the Supabase CLI's own ledger. Every
   table they make has row-level security in the same file, and they grant the Data API's roles what the pages use
   themselves, so Supabase's change of 2026-10-30 (new tables closed to the Data API) changes nothing here.
   `supabase/schemas` is upstream's declarative copy of the same schema, which Tofu does not read.
@@ -103,6 +103,11 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
   people (`tofu_hosting.before_user_created(jsonb)`, only when Tofu has written it; Tofu writes it as `postgres`, the
   role these files run as, so the function may run it), and raises the check's own message when it answers with an
   error. A new file rather than a change to the one before, because Tofu applies each file once.
+- `supabase/migrations/20261025220100_tofu_webmail_domains.sql` (new): the 102 webmail domains (gmail.com,
+  outlook.com, yahoo.com, ...) of upstream's `supabase/seed.sql`, put into `favicons_excluded_domains` where they are
+  not already there. Upstream's own production setup loads the seed (`supabase db push --include-seed` in
+  `scripts/supabase-remote-init.mjs`); Tofu applies `supabase/migrations` only, and without the list every contact with
+  such an address and no Gravatar picture would get its mail provider's logo as their picture.
 - `supabase/migrations/20260128165057_sso_handling.sql`: its first line created the `pgjwt` extension, which nothing
   uses and newer Supabase databases no longer offer. `20260304104600_note_attachments_trigger.sql` and
   `20260309112831_fix_security_warnings.sql`: they no longer create `pg_net` (each file has a note at the point).
@@ -145,8 +150,11 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
   LinkedIn address over the other contact's, and keeps the earliest "first seen".
 - Upstream behaviour kept: when a contact or company is saved without a picture, the database asks gravatar.com for
   one by a hash of the contact's address (the `http` extension) and otherwise uses the address's or website's domain
-  icon from `favicon.show`, which the browser then loads. The `attachments` bucket is public: anyone with a file's link
-  can open it, as upstream made it.
+  icon from `favicon.show`, which the browser then loads — except for the webmail domains listed in
+  `favicons_excluded_domains` (upstream's seed, here a migration, above), whose icon is nobody's picture. The
+  `attachments` bucket is public: anyone with a file's link can open it, as upstream made it.
+- `supabase/seed.sql` itself is never run on Tofu (Tofu applies `supabase/migrations` only); its one statement is the
+  webmail list, which the migration above carries.
 
 ## Licence and caveats
 
