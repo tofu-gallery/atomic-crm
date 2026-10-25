@@ -34,6 +34,11 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
+        // Tofu: the links in Tofu's sign-in emails open <app>/auth/confirm?token_hash=…&type=…. The service worker
+        // answers every other address with the app's index.html, whose ./assets/… would then be looked for under
+        // /auth/ and never load; this address goes to the network, which serves public/auth/confirm/index.html.
+        // Workbox tests the path and the query together.
+        navigateFallbackDenylist: [/\/auth\/confirm(\/|\?|$)/],
       },
       manifest: false, // Use existing manifest.json from public/
     }),

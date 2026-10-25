@@ -15,17 +15,6 @@ window.addEventListener("vite:preloadError", () => {
   }
 });
 
-// Tofu: the sign-in emails Tofu writes link to <app>/auth/confirm?token_hash=…&type=…. The hosting serves
-// public/auth/confirm/index.html there, which hands the link to the #/auth-confirm page; once the service worker
-// is installed it may answer that address with this page instead, so the same hand-off happens here.
-if (/\/auth\/confirm\/?$/.test(window.location.pathname)) {
-  window.location.replace(
-    window.location.pathname.replace(/auth\/confirm\/?$/, "") +
-      "#/auth-confirm" +
-      window.location.search,
-  );
-}
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />

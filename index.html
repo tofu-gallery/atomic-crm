@@ -143,6 +143,22 @@
       </div>
     </div>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!--
+      Tofu: the links in Tofu's sign-in emails open <app>/auth/confirm?token_hash=…&type=…, which the hosting answers
+      with public/auth/confirm/index.html and the service worker leaves to the hosting (vite.config.ts). Should
+      anything still answer that address with this page (a host that sends every address here), its ./assets/… would
+      be looked for under /auth/ and never load, so the same hand-off to the #/auth-confirm page runs here, before the
+      app's own script.
+    -->
+    <script>
+      if (/\/auth\/confirm(\/(index\.html)?)?$/.test(window.location.pathname)) {
+        window.location.replace(
+          window.location.pathname.replace(/auth\/confirm(\/(index\.html)?)?$/, "") +
+            "#/auth-confirm" +
+            window.location.search,
+        );
+      }
+    </script>
     <script type="module" src="<%= mainScript %>"></script>
   </body>
 </html>

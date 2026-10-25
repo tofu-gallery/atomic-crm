@@ -65,6 +65,11 @@ gallery copies.
 - **Links in Tofu's emails** point at `<app>/auth/confirm?token_hash=…&type=…`. `public/auth/confirm/index.html`
   hands them to the app's `#/auth-confirm` page, which uses the link only when the person presses Continue (so a mail
   scanner that opens it spends nothing), then shows the set-password page for a password email, or signs the person in.
+  Once a browser has opened the copy, upstream's service worker (the offline cache) answers every address with the
+  app's own page — which, served at `/auth/confirm`, looks for its scripts under `/auth/` and never gets past
+  "Loading..." — so it leaves this one address to the hosting (`navigateFallbackDenylist` in `vite.config.ts`).
+  `index.html` carries the same hand-off in a small script before the app's own, for a host that answers the address
+  with the app's page.
 
 ## What we changed, and why
 
@@ -95,9 +100,9 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
   directly; a note's files are removed from Storage by the page once the note is deleted or saved without them.
 - `src/components/atomic-crm/sales/SalesCreate.tsx` and the English and French messages: the optional first password,
   and a success message that says how the new user signs in.
-- `src/components/atomic-crm/login/AuthConfirmPage.tsx`, `public/auth/confirm/index.html`, `src/main.tsx` (the same
-  hand-off once the service worker answers that address), `root/CRM.tsx` (the route) and `authProvider.ts` (no
-  sign-in check on it): the links in Tofu's emails.
+- `src/components/atomic-crm/login/AuthConfirmPage.tsx`, `public/auth/confirm/index.html`, `vite.config.ts` (the
+  service worker leaves `/auth/confirm` to the hosting), `index.html` (the same hand-off, before the app's script),
+  `root/CRM.tsx` (the route) and `authProvider.ts` (no sign-in check on it): the links in Tofu's emails.
 - `settings/ProfilePage.tsx` and `settings/SettingsPageMobile.tsx`: the MCP server's address only with `VITE_MCP_SERVER`.
 - `src/App.tsx`: upstream's CRM reports the address of every production copy to `atomic-crm-telemetry.marmelab.com`;
   a copy on Tofu passes the CRM's own `disableTelemetry`.
