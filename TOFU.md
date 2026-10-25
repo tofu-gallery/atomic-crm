@@ -201,29 +201,59 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 
 ## Verification
 
-Run on 2026-10-25 on macOS, Node.js 22.22.3, npm 10.9.8, with nothing outward: no deployment, no Docker. Items 3
-and 5 were run on the first version (`pin/2026-10-25`, `7e68426`). A review of it then found the confirm link stuck
-behind the service worker, the Users page outside the plan's number of people and the seed's webmail list missing;
-the other items were run on this version (the changes from `f66f955` on), where those fixes reach.
+Run on 2026-10-25 on macOS, Node.js 22.22.3, npm 10.9.8, with nothing outward: no deployment, no Docker. Three
+versions were checked. Items 4 and 6 ran on the first (`pin/2026-10-25`, `7e68426`); a review then found the confirm
+link stuck behind the service worker, the Users page outside the plan's number of people and the seed's webmail list
+missing, and items 3, 5, 7 and 9 ran on the second (`pin/2026-10-25.1`, the code of `d34f880`), which fixed those.
+A review of that one found the first account refused on a Supabase Cloud database before the app's sign-in is
+turned on, with words an owner cannot act on; items 1, 2 and 8 ran on this version (the code of `f13379d`), which
+changes only the sign-up and "Forgot password?" pages (with their messages and `signUp`) and this file, and nothing
+the other items test: no migration, no service worker, no Users page.
 
-1. **The tree as Tofu deploys it**, for this version: `git archive` of `d34f880` and `tar -x`, then
-   `find . -type f -exec chmod a-x {} +`. `npm ci`: 1,107 packages (husky: ".git can't be found"). `npm run build`
-   with only Tofu's names set (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`) and
-   `NODE_ENV=production`, the path upstream's `define` block takes: `tsc` passed, Vite built 61 files and the key was
-   inlined; `dist/auth/confirm/index.html` is there, `dist/sw.js` registers its navigation fallback with
-   `denylist: [/\/auth\/confirm(\/|\?|$)/]`, and `dist/index.html` carries the hand-off script.
-2. **The migrations, the way Tofu applies them**, on PGlite 0.4.3 (PostgreSQL 17 in WebAssembly; this Mac's
+1. **The tree as Tofu deploys it**, for this version: `git archive` of `f13379d` and `tar -x`, then
+   `find . -type f -exec chmod a-x {} +` (732 files, none executable). `npm ci`: 1,107 packages (husky: ".git can't be
+   found"). `npm run build` with only Tofu's names set (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
+   `VITE_SUPABASE_ANON_KEY`) and `NODE_ENV=production`, the path upstream's `define` block takes: `tsc` passed, Vite
+   built 61 files and the key was inlined; `dist/auth/confirm/index.html` is there, `dist/sw.js` registers its
+   navigation fallback with `denylist: [/\/auth\/confirm(\/|\?|$)/]`, and `dist/index.html` carries the hand-off
+   script. `npm run typecheck` (the app's own `tsc` project, which the build's `tsc` does not check) reports one error,
+   there since the first version and in no file this version changed: the demo data provider's `mergeContacts`
+   (`providers/fakerest/dataProvider.ts`) answers nothing, where the Supabase one now answers `{ success, winnerId }`.
+   The pages never read that answer.
+2. **The sign-up and "Forgot password?" pages before the app's sign-in is turned on**, this version, in headless
+   Chromium (Playwright 1.64, `--use-mock-keychain --use-angle=swiftshader --enable-unsafe-swiftshader`, service
+   workers off) against 127.0.0.1 only: the build of item 1 served as a folder of files, and a stand-in auth service
+   answering the way GoTrue's source writes its errors (`internal/api/errors.go`, `mail.go`) — for a page that sends
+   `X-Supabase-Api-Version: 2024-01-01`, as supabase-js does, `{ code, message }` with the version header echoed —
+   and an empty CRM (`init_state` 0). 12 checks, all passed. The sign-up page, given Supabase Cloud's refusal
+   (400 `email_address_not_authorized`, `Email address "…" cannot be used as it is not authorized`), showed "This app
+   can't send email yet, so it can't make your account. Turn on sign-in on the app's Sign-in page in Tofu, then try
+   again." as an error that was still on screen 6.5 seconds later, and stayed on the sign-up page: with the version
+   header readable by the page, with it hidden from the page by CORS (supabase-js then hands the page no code, only
+   the message and the status 400) and in the pre-2024 shape (`error_code`, `msg`); and for a 500 "Error sending
+   confirmation email". In French (`fr-FR`), the French sentence. A weak-password refusal still showed the auth
+   service's own words ("Password should be at least 12 characters.") as before, and a sign-up the auth service
+   accepted with confirmation pending went on to "Please follow the link we just sent you by email to confirm your
+   account." The "Forgot password?" page showed its own sentence ("… so it can't send you a password email. …") for
+   the same refusals (version header readable and hidden, and a 500 "Error sending recovery email"), and in French;
+   an accepted request still went on to the sign-in page with `passwordRecoveryEmailSent=1`. No page error, no
+   request outside 127.0.0.1, no Edge Function call. A control build of `pin/2026-10-25.1` against the same stand-in
+   reproduced the review's finding: the sign-up page showed `Email address "…" cannot be used as it is not
+   authorized` (in English on a French browser too) and "Error sending confirmation email" as a passing note, gone
+   within 6.5 seconds; the "Forgot password?" page did the same with its refusals.
+3. **The migrations, the way Tofu applies them**, on PGlite 0.4.3 (PostgreSQL 17 in WebAssembly; this Mac's
    PostgreSQL 14 lacks the `security_invoker` views the schema uses) with a stand-in for a new Supabase project (an
    `auth` schema owned by `supabase_auth_admin` with `auth.users` and `auth.identities` in the auth service's own
    columns, `auth.uid()`; a `storage` schema; the `anon`, `authenticated` and `service_role` roles; `pgcrypto`,
    `citext` and `unaccent` in `extensions`; and a non-superuser owner of `public` standing in for `postgres`, with
-   rights on the auth tables): each file in one transaction with its ledger row, as that owner. This version: all 32
-   applied and a second run applied none (the first version: all 30, with and without Supabase's pre-2026-10-30
-   default grants; this run with them). The one local change: the managed database has the `http` extension and
-   PGlite does not, so its `create extension` line was replaced by a stand-in `http_get` answering 404. Tofu's own
-   reader of these files (`scanMigration` and `revokesTableAccess` in `packages/api/src/app-migrations.ts`) took
-   every one of the 32 as a single transaction that takes no table's access away.
-3. **SQL as the auth service and the Data API's roles, first version** (31 checks, all passed): every table in `public`
+   rights on the auth tables): each file in one transaction with its ledger row, as that owner. The second version
+   (`d34f880`; this version adds no file): all 32 applied and a second run applied none (the first version: all 30,
+   with and without Supabase's pre-2026-10-30 default grants; this run with them). The one local change: the managed
+   database has the `http` extension and PGlite does not, so its `create extension` line was replaced by a stand-in
+   `http_get` answering 404. Tofu's own reader of these files (`scanMigration` and `revokesTableAccess` in
+   `packages/api/src/app-migrations.ts`) took every one of the 32 as a single transaction that takes no table's access
+   away.
+4. **SQL as the auth service and the Data API's roles, first version** (31 checks, all passed): every table in `public`
    has row-level security; no `pg_net`, `pgjwt` or note-attachment trigger; the first sign-up became the administrator, a
    second was refused ("Sign-up is closed: ask an administrator of this CRM to add you.") and left no account; `anon`
    reads `init_state` and no contact, and cannot call `tofu_add_sale` or `get_user_id_by_email`; an administrator
@@ -233,7 +263,7 @@ the other items were run on this version (the changes from `f66f955` on), where 
    account and enabling him lifted it; a new address moved his account, identity and CRM user; the statement Tofu's Add
    by email sends got through the guard; a contact Mike made was read back by Frank through `contacts_summary`; a note
    was deleted; `merge_contacts` through the Data API merged two contacts and their tasks; `global_search` answered.
-4. **SQL, this version** (20 checks, all passed): every table in `public` has row-level security;
+5. **SQL, second version** (20 checks, all passed): every table in `public` has row-level security;
    `favicons_excluded_domains` holds the seed's 102 domains, once each, and on a database the seed was loaded into the
    new file adds none twice; `get_domain_favicon` answers nothing for `gmail.com` and `outlook.com` and
    `https://favicon.show/trytofu.ai` for `trytofu.ai`, and a contact saved with a `gmail.com` address gets no picture
@@ -246,7 +276,7 @@ the other items were run on this version (the changes from `f66f955` on), where 
    its CRM user was still added (no new account); with room for 5 again the add went through, a confirmed account with
    one email identity and a password that verifies, not an administrator; a sign-up sent straight to the auth service
    is still refused; a non-administrator still cannot add users; contacts read back through `contacts_summary`.
-5. **The built app in headless Chromium, first version** (Playwright 1.64, `--use-mock-keychain --use-angle=swiftshader
+6. **The built app in headless Chromium, first version** (Playwright 1.64, `--use-mock-keychain --use-angle=swiftshader
    --enable-unsafe-swiftshader`, service workers off) against 127.0.0.1 only: `dist` served the way static hosting
    serves it (files and a folder's `index.html`; `/` and `/auth/confirm` answered 200), and the page's auth-service
    and Data API calls answered by a local stand-in over the same PGlite database, each query run as the role
@@ -257,7 +287,7 @@ the other items were run on this version (the changes from `f66f955` on), where 
    was sent to access-denied from the user form; a password-email link in Tofu's shape (`/auth/confirm?token_hash=…&type=recovery`)
    reached `#/auth-confirm`, and Continue led to the set-password page, which set his new password. No page error, no
    request outside 127.0.0.1, no Edge Function call.
-6. **The confirm link with the service worker on**, this version, in the same browser against 127.0.0.1 only, with a
+7. **The confirm link with the service worker on**, second version, in the same browser against 127.0.0.1 only, with a
    stand-in auth service answering the link's one call: `dist` served three ways — a folder's `index.html` at
    `/auth/confirm`, a 301 from `/auth/confirm` to `/auth/confirm/`, and a host that answers every address with
    `index.html` — and for each, a fresh browser and one that had opened the copy first, with the service worker
@@ -267,19 +297,20 @@ the other items were run on this version (the changes from `f66f955` on), where 
    finding: the worker answered the link with its cached `index.html`, which stayed on "Loading...". No request left
    127.0.0.1; the one page error was the catch-all host's, which answers the page's `/auth/assets/…` script with HTML
    before the hand-off moves on.
-7. **Tofu's own checks** on the pushed branch at `d34f880`: the gallery's shelf check (Tofu's GitHub import, the
-   static lane's predicates and the safety check) said `safety ok (4 findings)` and 488 of 500 published files (731
-   files), not on the static lane (a Vite app with an environment file, on server hosting anyway for its database).
+8. **Tofu's own checks** on the pushed branch at `f13379d`, this version: the gallery's shelf check (Tofu's GitHub
+   import, the static lane's predicates and the safety check) said `safety ok (4 findings)` and 489 of 500 published
+   files (732 files; the second version: 488 of 731), not on the static lane (a Vite app with an environment file, on
+   server hosting anyway for its database).
    Before `doc/` was left out it said `SAFETY BLOCKS tripwire:credential-form-off-origin`. The four findings are
    medium and block nothing: `site_url` and a redirect address on `localhost` in upstream's local Supabase configs and
    a test, and upstream's `public/auth-callback.html` putting the sign-in token into the app's own `#/auth-callback`
    address on the same site.
-8. **Pictures** for the gallery at 1200×750 (twice the pixels), light theme, in the same browser: the deals board,
-   Frank's contact page and the companies list, with the sample content of a two-person design studio — Mike, its
-   account manager, and Frank, who owns a bakery, at hello@trytofu.ai, with clients named by their trade alone. They
-   were taken with the app's own in-browser data provider (`createDataProvider` in `providers/fakerest`, which
-   upstream's demo uses) holding that content, through a local entry that is not part of this fork: the same pages a
-   copy shows, with no database behind them.
+9. **Pictures**, second version (this version changes none of their pages), for the gallery at 1200×750 (twice the
+   pixels), light theme, in the same browser: the deals board, Frank's contact page and the companies list, with the
+   sample content of a two-person design studio — Mike, its account manager, and Frank, who owns a bakery, at
+   hello@trytofu.ai, with clients named by their trade alone. They were taken with the app's own in-browser data
+   provider (`createDataProvider` in `providers/fakerest`, which upstream's demo uses) holding that content, through a
+   local entry that is not part of this fork: the same pages a copy shows, with no database behind them.
 
 ## What only a real deploy can verify
 
@@ -287,7 +318,12 @@ the other items were run on this version (the changes from `f66f955` on), where 
   `attachments` bucket and the Storage policies the first file writes as `postgres`, and Tofu's own grants pass.
 - The real auth service and Data API (here a local stand-in), Storage uploads of attachments and pictures (not run),
   and the bcrypt passwords `tofu_add_sale` writes being accepted by the auth service.
-- Password and confirmation emails once the app's sign-in is set up in Tofu, and the hosting serving
+- Password and confirmation emails once the app's sign-in is turned on in Tofu, and the hosting serving
   `/auth/confirm` from `auth/confirm/index.html` (checked here with three kinds of local static server, the service
   worker on and off).
+- A real Supabase Cloud database refusing the first sign-up before sign-in is turned on: the refusal's shape (here a
+  stand-in written from GoTrue's source and Supabase's documentation), whether the hosted auth service lets the page
+  read its API version header (the page recognises the refusal either way), and that the refused sign-up leaves no
+  account (GoTrue sends the confirmation inside the sign-up's own transaction; not run live). Then, after "Turn on
+  Google sign-in", the first account's confirmation email arriving and its link signing the owner in.
 - Tofu's people check in a real copy's database, written by Tofu, and `tofu_add_sale` running it there as `postgres`.
