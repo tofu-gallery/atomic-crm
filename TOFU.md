@@ -40,11 +40,20 @@ gallery copies.
 
 - **The first account made in the app becomes its administrator.** A new copy opens on "Welcome to Atomic CRM —
   create the first user account". Until someone does, **anyone who opens the copy's address can make that account
-  and become its administrator**, so the owner should open the copy and make theirs first, before sharing the
-  address. Two ways to be sure nobody else takes it: keep the copy private on Tofu (its sharing set to people you
-  choose) until your account exists, or add your own address from the app's People card in Tofu before anyone opens
-  it — that account becomes the administrator, and you set its password with "Forgot password?" (which needs
-  sign-in mail, below).
+  and become its administrator**, so the owner makes theirs first, before sharing the address, in this order:
+  1. **Turn on sign-in in Tofu first**: on the app's Sign-in page, press "Turn on Google sign-in". Besides Google,
+     it gives the copy's auth service Tofu's sending address and the copy's own address, which every email the copy
+     sends needs (Mail, below). Tofu cannot do this by itself for a new copy (below).
+  2. **Then open the copy and make your account at once.** On a Supabase Cloud database, where confirming a new
+     address is on by default, the account then waits for its confirmation email: open the link in it to sign in.
+     On Tofu's own database backend, addresses are confirmed at once and you are signed in straight away.
+
+  Done the other way round on a Supabase Cloud database, the sign-up is refused and makes no account, and the page
+  says "This app can't send email yet, so it can't make your account. Turn on sign-in on the app's Sign-in page in
+  Tofu, then try again." Two ways to be sure nobody else takes the first account: keep the copy private on Tofu (its
+  sharing set to people you choose) until your account exists, or add your own address from the app's People card
+  in Tofu before anyone opens it — that account becomes the administrator, and you set its password with "Forgot
+  password?", which needs step 1 too.
 - **If someone else makes the first account, it cannot simply be undone.** The database makes the administrator the
   moment the account exists, before any confirmation, so even a sign-up with a made-up address takes the place, and
   after it the database refuses every new sign-up (below). That person can then read and change everything in the CRM.
@@ -52,8 +61,8 @@ gallery copies.
   (`sales.user_id` in upstream's first migration), so a removal there answers "blocked". The owner can still get in by
   adding their own address from the People card, but only as an ordinary user, who cannot disable anyone; making the
   owner the administrator again and shutting the other person out takes a change to the database that a coding agent
-  makes (a migration that sets `administrator` on the owner's row and disables the other). So open a new copy before
-  anyone else can.
+  makes (a migration that sets `administrator` on the owner's row and disables the other). So turn on sign-in and
+  make your account in a new copy before anyone else can.
 - **After the first account, the database refuses every new account** except the ones an administrator adds on the
   app's Users page, the ones the owner adds from Tofu's People card, and single sign-on accounts the auth service's
   administrator set up. Upstream's pages already allowed only that, but its auth service accepted any sign-up sent to
@@ -71,12 +80,19 @@ gallery copies.
   from the app's People card in Tofu, or a plan with more room, makes a place.
 - **Disabling a user** (an administrator, on the Users page) bans their account in the auth service, so they cannot
   sign in until they are enabled again; a page they already have open keeps its sign-in for up to an hour.
-- **Mail.** Password emails, and the confirmation of a new address where the database asks for one, need the app's
-  sign-in set up in Tofu (the app's Sign-in page), which gives the auth service Tofu's sending address and this app's
-  address. Before that, Supabase's built-in mailer sends only to its own organisation's addresses and a few messages an
-  hour, so a password email is refused. On Tofu's own database backend new addresses are confirmed at once; on a
-  Supabase Cloud database, where confirming a new address is on by default, the first account waits for its
-  confirmation email.
+- **Mail.** Every email the copy sends needs the app's sign-in turned on in Tofu (step 1 above), which gives the
+  auth service Tofu's sending address and this app's address: password emails ("Forgot password?", the profile
+  page's password change, a user added on the Users page without a first password) and, on a Supabase Cloud
+  database, the confirmation of every new account, the first one included. Tofu does not turn it on by itself for a
+  new copy: the copy's first deploy creates its database before any version of the copy is published, so when the
+  database is ready Tofu's sign-in setup finds no address to write and skips, and after that only the owner's "Turn
+  on Google sign-in" writes it. Until then, on a Supabase Cloud database, the auth service's built-in mailer refuses
+  every address outside Supabase's own team (`email_address_not_authorized`), so a sign-up is refused and makes no
+  account (the auth service sends the confirmation inside the sign-up itself), and a password email is refused. The
+  sign-up page and the "Forgot password?" page then say that the app can't send email yet and to turn on sign-in on
+  the app's Sign-in page in Tofu, in place of the auth service's own words (also for its "Error sending
+  confirmation email" and "Error sending recovery email"). On Tofu's own database backend new addresses are
+  confirmed at once, so the first account needs no email.
 - **Links in Tofu's emails** point at `<app>/auth/confirm?token_hash=…&type=…`. `public/auth/confirm/index.html`
   hands them to the app's `#/auth-confirm` page, which uses the link only when the person presses Continue (so a mail
   scanner that opens it spends nothing), then shows the set-password page for a password email, or signs the person in.
@@ -128,6 +144,12 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 - `src/components/atomic-crm/login/AuthConfirmPage.tsx`, `public/auth/confirm/index.html`, `vite.config.ts` (the
   service worker leaves `/auth/confirm` to the hosting), `index.html` (the same hand-off, before the app's script),
   `root/CRM.tsx` (the route) and `authProvider.ts` (no sign-in check on it): the links in Tofu's emails.
+- `login/SignupPage.tsx`, `src/components/supabase/forgot-password-page.tsx`, `login/emailNotReady.ts` (new) and the
+  English and French messages: when the auth service cannot send email yet (`email_address_not_authorized`, or
+  "Error sending confirmation email" / "Error sending recovery email"), the sign-up and "Forgot password?" pages say
+  that the app can't send email yet and to turn on sign-in on the app's Sign-in page in Tofu, and the message stays
+  until it is closed; upstream showed the auth service's own words for a moment. `signUp` in `dataProvider.ts` keeps
+  the auth service's error code and status for it.
 - `settings/ProfilePage.tsx` and `settings/SettingsPageMobile.tsx`: the MCP server's address only with `VITE_MCP_SERVER`.
 - `src/App.tsx`: upstream's CRM reports the address of every production copy to `atomic-crm-telemetry.marmelab.com`;
   a copy on Tofu passes the CRM's own `disableTelemetry`.

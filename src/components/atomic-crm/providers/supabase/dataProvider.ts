@@ -156,7 +156,15 @@ const getDataProviderWithCustomMethods = () => {
 
       if (!response.data?.user || response.error) {
         console.error("signUp.error", response.error);
-        throw new Error(response?.error?.message || "Failed to create account");
+        // Tofu: the auth service's error code and status go with the message, so the sign-up page can tell a copy
+        // that sends no email yet (TOFU.md, Accounts and sign-up) from any other refusal.
+        throw Object.assign(
+          new Error(response?.error?.message || "Failed to create account"),
+          {
+            code: response?.error?.code,
+            status: response?.error?.status,
+          },
+        );
       }
 
       // Update the is initialized cache

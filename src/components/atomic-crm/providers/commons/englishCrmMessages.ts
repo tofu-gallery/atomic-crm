@@ -382,6 +382,8 @@ export const englishCrmMessages = {
       confirm_password: "Confirm password",
       confirmation_required:
         "Please follow the link we just sent you by email to confirm your account.",
+      recovery_email_not_ready:
+        "This app can't send email yet, so it can't send you a password email. Turn on sign-in on the app's Sign-in page in Tofu, then try again.",
       recovery_email_sent:
         "If you're a registered user, you should receive a password recovery email shortly.",
       sign_in_failed: "Failed to log in.",
@@ -391,6 +393,8 @@ export const englishCrmMessages = {
         create_first_user:
           "Create the first user account to complete the setup.",
         creating: "Creating...",
+        email_not_ready:
+          "This app can't send email yet, so it can't make your account. Turn on sign-in on the app's Sign-in page in Tofu, then try again.",
         initial_user_created: "Initial user successfully created",
       },
       welcome_title: "Welcome to Atomic CRM",

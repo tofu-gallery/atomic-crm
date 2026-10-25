@@ -15,6 +15,7 @@ import { Notification } from "@/components/admin/notification";
 import { ConfirmationRequired } from "./ConfirmationRequired";
 import { SSOAuthButton } from "./SSOAuthButton";
 import { googleWorkplaceDomain } from "./authConfig";
+import { isEmailNotReady } from "./emailNotReady";
 
 export const SignupPage = () => {
   const queryClient = useQueryClient();
@@ -67,6 +68,17 @@ export const SignupPage = () => {
         });
     },
     onError: (error) => {
+      // Tofu: a copy whose sign-in is not turned on in Tofu yet sends no email, so it cannot make the first account.
+      if (isEmailNotReady(error)) {
+        notify("crm.auth.signup.email_not_ready", {
+          type: "error",
+          autoHideDuration: null,
+          messageArgs: {
+            _: "This app can't send email yet, so it can't make your account. Turn on sign-in on the app's Sign-in page in Tofu, then try again.",
+          },
+        });
+        return;
+      }
       notify(error.message);
     },
   });

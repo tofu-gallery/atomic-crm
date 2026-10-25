@@ -5,6 +5,7 @@ import { Layout } from "@/components/supabase/layout";
 import type { FieldValues, SubmitHandler } from "react-hook-form";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
+import { isEmailNotReady } from "@/components/atomic-crm/login/emailNotReady";
 
 interface FormData {
   email: string;
@@ -30,6 +31,17 @@ export const ForgotPasswordPage = () => {
         email: values.email,
       });
     } catch (error: any) {
+      // Tofu: a copy whose sign-in is not turned on in Tofu yet sends no password email.
+      if (isEmailNotReady(error)) {
+        notify("crm.auth.recovery_email_not_ready", {
+          type: "error",
+          autoHideDuration: null,
+          messageArgs: {
+            _: "This app can't send email yet, so it can't send you a password email. Turn on sign-in on the app's Sign-in page in Tofu, then try again.",
+          },
+        });
+        return;
+      }
       notify(
         typeof error === "string"
           ? error
