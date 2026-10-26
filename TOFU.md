@@ -13,7 +13,10 @@ gallery copies.
 
 ## How Tofu runs it
 
-- **Preset** `vite`, **root folder** the repository root, on Tofu's server hosting (it has a database). The pages
+- **Preset** `vite`, **root folder** the repository root, on Tofu's server hosting, which the Free plan includes too.
+  Free hosting's own Vite build takes a `vite.config.ts` with the React or Vue plugin, `server`, `resolve.alias` and
+  `build.outDir` only, and this one has more (Tailwind's plugin, the service worker, the HTML plugin, the bundle
+  report, `define`), so on the Free plan, as on a paid one, Tofu builds the copy on its server hosting. The pages
   are a finished build; nothing runs on a server per request.
 - **Install** with npm from `package-lock.json` (checked here with `npm ci`; upstream's `prepare` script runs `husky`,
   which finds no `.git` and does nothing). **Build** `npm run build`, which is `tsc && vite build`. **Output** `dist`.
@@ -156,12 +159,21 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 - `vite.config.ts`: the build no longer opens its bundle report in a browser.
 - `supabase/functions` (removed), and their sections in `supabase/config.toml` and `config.e2e.toml`. Tofu would
   otherwise deploy them for an account its `appFunctions` switch admits, without the settings they read.
-- `.env.development` and `.env.e2e` (kept, their values emptied, each with a Tofu comment): `VITE_SB_PUBLISHABLE_KEY=`
-  in both (the local stack's publishable key), `SERVICE_ROLE_KEY=` in `.env.e2e` (its service-role token) and
-  `VITE_INBOUND_EMAIL=` in `.env.development` (upstream's own Postmark inbound address). `supabase/signing_keys.json`
-  (removed): the local stack's private signing key. `supabase/functions/.env` went with `supabase/functions` (above):
-  the functions' local Postmark webhook settings and keys. `npx supabase status` prints a local stack's keys;
-  upstream's end-to-end tests (`make` targets that copy `signing_keys.json`) need them put back.
+- `.env.development`, `.env.e2e` and `.npmrc` (removed). On the Free plan Tofu refuses to build an upload that holds
+  an environment file or an `.npmrc`, and that refusal is not one the Free plan's server hosting takes instead, so
+  with them a Free-plan copy could never go online, and its owner could not remove them. (The versions before kept
+  the two `.env` files with upstream's committed values emptied: the local stack's publishable key in both, its
+  service-role token in `.env.e2e`, upstream's own Postmark inbound address in `.env.development`.) Nothing a copy
+  builds or runs reads them: a production build reads `.env`, `.env.local` and `.env.production` only, the app falls
+  back to the `attachments` bucket and to no demo without them, and the address and public key come from the settings
+  Tofu writes. `.npmrc` held only `min-release-age=1` (npm then picks no version published less than a day ago),
+  which changes nothing for an install from `package-lock.json`; `AGENTS.md`'s line about it now says this fork has
+  none, and to pass `--min-release-age=1` when adding or upgrading a dependency. Upstream's local development
+  (`npm run dev` reads `.env.development`) and end-to-end tests (`--mode e2e` and `playwright.config.ts` read
+  `.env.e2e`) need the two files back: take them from this fork's `main`, which is upstream's.
+- `supabase/signing_keys.json` (removed): the local stack's private signing key. `supabase/functions/.env` went with
+  `supabase/functions` (above): the functions' local Postmark webhook settings and keys. `npx supabase status` prints
+  a local stack's keys; upstream's end-to-end tests (`make` targets that copy `signing_keys.json`) need them put back.
 - `.github/workflows` (removed): upstream's CI and deployment workflows.
 - `doc/` (removed): upstream's documentation website, a separate Astro project a copy neither builds nor serves. One
   of its code samples (a widget that signs in with a password at `https://<instance_url>/auth/v1/token`) reads to
@@ -189,6 +201,13 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 - `supabase/seed.sql` itself is never run on Tofu (Tofu applies `supabase/migrations` only); its one statement is the
   webmail list, which the migration above carries.
 
+## Start-up when several starts run at once
+
+There is nothing to lock: a copy has no server process of its own. Its pages are files, and its schema is made by Tofu
+applying `supabase/migrations` before each build (above), never by a start, so hosting that starts several instances
+at once runs no schema work. Every table those files make in `public` has row-level security on, with the policies
+and grants the pages use (Migrations, above; Verification, items 3 to 5).
+
 ## Licence and caveats
 
 - **MIT**, `LICENSE.md` (Copyright (c) 2024-present, Francois Zaninotto, Marmelab), kept as it is. A copy needs no
@@ -201,29 +220,37 @@ which the pages call; `delete_note_attachments`, which database triggers call; `
 
 ## Verification
 
-Run on 2026-10-25 on macOS, Node.js 22.22.3, npm 10.9.8, with nothing outward: no deployment, no Docker. Three
-versions were checked. Items 4 and 6 ran on the first (`pin/2026-10-25`, `7e68426`); a review then found the confirm
-link stuck behind the service worker, the Users page outside the plan's number of people and the seed's webmail list
-missing, and items 3, 5, 7 and 9 ran on the second (`pin/2026-10-25.1`, the code of `d34f880`), which fixed those.
-A review of that one found the first account refused on a Supabase Cloud database before the app's sign-in is
-turned on, with words an owner cannot act on; items 1, 2 and 8 ran on this version (the code of `f13379d`), which
-changes only the sign-up and "Forgot password?" pages (with their messages and `signUp`) and this file, and nothing
-the other items test: no migration, no service worker, no Users page.
+Run on 2026-10-25 and, for this version, 2026-10-26 (UTC) on macOS, Node.js 22.22.3, npm 10.9.8, with nothing
+outward: no deployment, no Docker. Four versions were checked. Items 4 and 6 ran on the first (`pin/2026-10-25`,
+`7e68426`); a review then found the confirm link stuck behind the service worker, the Users page outside the plan's
+number of people and the seed's webmail list missing, and items 3, 5, 7 and 9 ran on the second
+(`pin/2026-10-25.1`, the code of `d34f880`), which fixed those. A review of that one found the first account refused
+on a Supabase Cloud database before the app's sign-in is turned on, with words an owner cannot act on; item 2 ran on
+the third (`pin/2026-10-25.2`, the code of `f13379d`), which changed only the sign-up and "Forgot password?" pages
+(with their messages and `signUp`) and this file, and nothing the other items test: no migration, no service worker,
+no Users page. A review of the third found that Tofu's Free build refuses its `.env.development`, `.env.e2e` and
+`.npmrc`; items 1 and 8, and items 3 and 5 again, ran on this version (the code of `40fa742`), with item 10, which is
+new. This version removes those three files and changes one line of `AGENTS.md` and this file, nothing else.
 
-1. **The tree as Tofu deploys it**, for this version: `git archive` of `f13379d` and `tar -x`, then
-   `find . -type f -exec chmod a-x {} +` (732 files, none executable). `npm ci`: 1,107 packages (husky: ".git can't be
-   found"). `npm run build` with only Tofu's names set (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
-   `VITE_SUPABASE_ANON_KEY`) and `NODE_ENV=production`, the path upstream's `define` block takes: `tsc` passed, Vite
-   built 61 files and the key was inlined; `dist/auth/confirm/index.html` is there, `dist/sw.js` registers its
+1. **The tree as Tofu deploys it**, for this version: `git archive` of `40fa742` and `tar -x`, then
+   `find . -type f -exec chmod a-x {} +` (729 files, none executable, with no `.npmrc` and no `.env` file). `npm ci`:
+   1,107 packages (husky: ".git can't be found"). `npm run build` with only Tofu's names set (`VITE_SUPABASE_URL`,
+   `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`) and `NODE_ENV=production`, the path upstream's `define`
+   block takes: `tsc` passed, Vite built 61 files and the key was inlined; the Storage bucket came out as
+   `attachments`, the app's own default; `dist/auth/confirm/index.html` is there, `dist/sw.js` registers its
    navigation fallback with `denylist: [/\/auth\/confirm(\/|\?|$)/]`, and `dist/index.html` carries the hand-off
-   script. `npm run typecheck` (the app's own `tsc` project, which the build's `tsc` does not check) reports one error,
-   there since the first version and in no file this version changed: the demo data provider's `mergeContacts`
-   (`providers/fakerest/dataProvider.ts`) answers nothing, where the Supabase one now answers `{ success, winnerId }`.
-   The pages never read that answer.
-2. **The sign-up and "Forgot password?" pages before the app's sign-in is turned on**, this version, in headless
+   script. Then the same build in the same tree with the third version's `.env.development`, `.env.e2e` and `.npmrc`
+   put back: 60 of the 61 files came out the same byte for byte (SHA-256), and the one that did not, `sw.js.map`,
+   differs only in the name of the random temporary folder Workbox builds the service worker in, which changes on every
+   build. So the three files changed nothing a copy serves. `npm run typecheck` (the app's own `tsc` project, which the
+   build's `tsc` does not check) reports one error, there since the first version and in no file this version changed:
+   the demo data provider's `mergeContacts` (`providers/fakerest/dataProvider.ts`) answers nothing, where the Supabase
+   one now answers `{ success, winnerId }`. The pages never read that answer.
+2. **The sign-up and "Forgot password?" pages before the app's sign-in is turned on**, third version, in headless
    Chromium (Playwright 1.64, `--use-mock-keychain --use-angle=swiftshader --enable-unsafe-swiftshader`, service
-   workers off) against 127.0.0.1 only: the build of item 1 served as a folder of files, and a stand-in auth service
-   answering the way GoTrue's source writes its errors (`internal/api/errors.go`, `mail.go`) — for a page that sends
+   workers off) against 127.0.0.1 only: the third version's build, made as item 1 describes, served as a folder of
+   files, and a stand-in auth service answering the way GoTrue's source writes its errors (`internal/api/errors.go`,
+   `mail.go`) — for a page that sends
    `X-Supabase-Api-Version: 2024-01-01`, as supabase-js does, `{ code, message }` with the version header echoed —
    and an empty CRM (`init_state` 0). 12 checks, all passed. The sign-up page, given Supabase Cloud's refusal
    (400 `email_address_not_authorized`, `Email address "…" cannot be used as it is not authorized`), showed "This app
@@ -247,12 +274,12 @@ the other items test: no migration, no service worker, no Users page.
    columns, `auth.uid()`; a `storage` schema; the `anon`, `authenticated` and `service_role` roles; `pgcrypto`,
    `citext` and `unaccent` in `extensions`; and a non-superuser owner of `public` standing in for `postgres`, with
    rights on the auth tables): each file in one transaction with its ledger row, as that owner. The second version
-   (`d34f880`; this version adds no file): all 32 applied and a second run applied none (the first version: all 30,
-   with and without Supabase's pre-2026-10-30 default grants; this run with them). The one local change: the managed
-   database has the `http` extension and PGlite does not, so its `create extension` line was replaced by a stand-in
-   `http_get` answering 404. Tofu's own reader of these files (`scanMigration` and `revokesTableAccess` in
-   `packages/api/src/app-migrations.ts`) took every one of the 32 as a single transaction that takes no table's access
-   away.
+   (`d34f880`), and again this version, which changes no migration: all 32 applied and a second run applied none (the
+   first version: all 30, with and without Supabase's pre-2026-10-30 default grants; these two runs with them). The
+   one local change: the managed database has the `http` extension and PGlite does not, so its `create extension`
+   line was replaced by a stand-in `http_get` answering 404. Tofu's own reader of these files (`scanMigration` and
+   `revokesTableAccess` in `packages/api/src/app-migrations.ts`) took every one of the 32 as a single transaction
+   that takes no table's access away (second version).
 4. **SQL as the auth service and the Data API's roles, first version** (31 checks, all passed): every table in `public`
    has row-level security; no `pg_net`, `pgjwt` or note-attachment trigger; the first sign-up became the administrator, a
    second was refused ("Sign-up is closed: ask an administrator of this CRM to add you.") and left no account; `anon`
@@ -263,9 +290,9 @@ the other items test: no migration, no service worker, no Users page.
    account and enabling him lifted it; a new address moved his account, identity and CRM user; the statement Tofu's Add
    by email sends got through the guard; a contact Mike made was read back by Frank through `contacts_summary`; a note
    was deleted; `merge_contacts` through the Data API merged two contacts and their tasks; `global_search` answered.
-5. **SQL, second version** (20 checks, all passed): every table in `public` has row-level security;
-   `favicons_excluded_domains` holds the seed's 102 domains, once each, and on a database the seed was loaded into the
-   new file adds none twice; `get_domain_favicon` answers nothing for `gmail.com` and `outlook.com` and
+5. **SQL, second version, and again this version** (20 checks, all passed both times): every table in `public` has
+   row-level security; `favicons_excluded_domains` holds the seed's 102 domains, once each, and on a database the
+   seed was loaded into the new file adds none twice; `get_domain_favicon` answers nothing for `gmail.com` and `outlook.com` and
    `https://favicon.show/trytofu.ai` for `trytofu.ai`, and a contact saved with a `gmail.com` address gets no picture
    while one at `trytofu.ai` gets that icon; the first sign-up became the administrator; with no `tofu_hosting` in the
    database an administrator adds a user as before. Then Tofu's check, written by Tofu's own statement
@@ -297,23 +324,38 @@ the other items test: no migration, no service worker, no Users page.
    finding: the worker answered the link with its cached `index.html`, which stayed on "Loading...". No request left
    127.0.0.1; the one page error was the catch-all host's, which answers the page's `/auth/assets/…` script with HTML
    before the hand-off moves on.
-8. **Tofu's own checks** on the pushed branch at `f13379d`, this version: the gallery's shelf check (Tofu's GitHub
+8. **Tofu's own checks** on the pushed branch at `40fa742`, this version: the gallery's shelf check (Tofu's GitHub
    import, the static lane's predicates and the safety check) said `safety ok (4 findings)` and 489 of 500 published
-   files (732 files; the second version: 488 of 731), not on the static lane (a Vite app with an environment file, on
-   server hosting anyway for its database).
+   files (729 files), not on the static lane, its build refused as `unsupported_vite_config`: Free hosting's sentence
+   for it is the build kind ("… a Vite app whose `vite.config.ts` uses settings Free hosting's build doesn't accept
+   …"), which the Free plan's server hosting takes instead, and Tofu's own `freeServerRoutable` answered yes for the
+   same files under the `vite` preset (run on a `git archive` of `40fa742` through Tofu's GitHub import). The static
+   builder's own rule on each file and Tofu's credential rule (`credentialPathReason`) named no file. On the third
+   version (its pin, `ec27bf3`: 732 files, 489 published) the build was refused as `unsafe_source_path`, with the
+   sentence for an environment file ("… whose upload holds `.env.development`, an environment file, which Free
+   hosting's build won't read …"), which the Free plan's server hosting does not take, and `freeServerRoutable`
+   answered no.
    Before `doc/` was left out it said `SAFETY BLOCKS tripwire:credential-form-off-origin`. The four findings are
    medium and block nothing: `site_url` and a redirect address on `localhost` in upstream's local Supabase configs and
    a test, and upstream's `public/auth-callback.html` putting the sign-in token into the app's own `#/auth-callback`
    address on the same site.
-9. **Pictures**, second version (this version changes none of their pages), for the gallery at 1200×750 (twice the
-   pixels), light theme, in the same browser: the deals board, Frank's contact page and the companies list, with the
-   sample content of a two-person design studio — Mike, its account manager, and Frank, who owns a bakery, at
+9. **Pictures**, second version (the versions after it change none of their pages), for the gallery at 1200×750
+   (twice the pixels), light theme, in the same browser: the deals board, Frank's contact page and the companies list,
+   with the sample content of a two-person design studio — Mike, its account manager, and Frank, who owns a bakery, at
    hello@trytofu.ai, with clients named by their trade alone. They were taken with the app's own in-browser data
    provider (`createDataProvider` in `providers/fakerest`, which upstream's demo uses) holding that content, through a
    local entry that is not part of this fork: the same pages a copy shows, with no database behind them.
+10. **The built app in headless Chromium, this version**, in the same browser (service workers off) against 127.0.0.1
+    only: the build of item 1, made without the three files, served as a folder of files (`/` and
+    `/auth/confirm/?token_hash=…&type=recovery` answered 200), with item 2's stand-in auth service and an empty CRM
+    (3 checks, all passed): the address answered 200, a new copy opened on the first-user page ("Create the first
+    user account to complete the setup."), and a first sign-up the stand-in accepted with confirmation pending went on
+    to `#/sign-up/confirm`. No page error, no request outside 127.0.0.1.
 
 ## What only a real deploy can verify
 
+- A Free-plan copy going online on Tofu's server hosting: here Tofu's own routing predicates on the branch's files
+  (item 8), not a deploy.
 - Tofu applying these files to a real managed database: the `http`, `citext` and `unaccent` extensions there, the
   `attachments` bucket and the Storage policies the first file writes as `postgres`, and Tofu's own grants pass.
 - The real auth service and Data API (here a local stand-in), Storage uploads of attachments and pictures (not run),
