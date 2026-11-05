@@ -42,6 +42,20 @@ describe("fakerest dataProvider", () => {
     expect(tags.map((tag) => tag.id)).toEqual([2]);
   });
 
+  it("ignores unknown ids when getting many contacts", async () => {
+    const dataProvider = createDataProvider({
+      db: { contacts: [{ id: 2, first_name: "Ann" }] } as unknown as Db,
+      latency: 0,
+      silent: true,
+    });
+
+    const { data: contacts } = await dataProvider.getMany("contacts", {
+      ids: [1, 2],
+    });
+
+    expect(contacts.map((contact) => contact.id)).toEqual([2]);
+  });
+
   it("lists a task created in the app before older ones in the global search", async () => {
     const dataProvider = createDataProvider({
       db: {
@@ -114,5 +128,83 @@ describe("fakerest dataProvider", () => {
     expect(
       results.filter((result) => result.resource === "contact_notes"),
     ).toHaveLength(10);
+  });
+
+  it("lists contacts named like the query before contacts whose background mentions it", async () => {
+    const dataProvider = createDataProvider({
+      db: {
+        companies: [],
+        contacts: [
+          {
+            id: 1,
+            first_name: "Alice",
+            last_name: "Martin",
+            background: "Introduced by John Doe",
+            first_seen: "2025-01-01T00:00:00.000Z",
+          },
+          {
+            id: 2,
+            first_name: "John",
+            last_name: "Doe",
+            first_seen: "2020-01-01T00:00:00.000Z",
+          },
+        ],
+        deals: [],
+        tasks: [],
+        contact_notes: [],
+        deal_notes: [],
+      } as unknown as Db,
+      latency: 0,
+      silent: true,
+    });
+
+    const results = await dataProvider.globalSearch(
+      "john doe",
+      ["contacts"],
+      10,
+    );
+
+    expect(results.map((result) => result.title)).toEqual([
+      "John Doe",
+      "Alice Martin",
+    ]);
+  });
+
+  it("finds a deal in the global search by any of its categories", async () => {
+    const dataProvider = createDataProvider({
+      db: {
+        companies: [],
+        contacts: [],
+        deals: [
+          {
+            id: 1,
+            name: "Acme rebrand",
+            categories: ["copywriting", "design"],
+            description: "New logo",
+          },
+          { id: 2, name: "Design review", description: "No categories" },
+        ],
+        tasks: [],
+        contact_notes: [],
+        deal_notes: [],
+      } as unknown as Db,
+      latency: 0,
+      silent: true,
+    });
+
+    const copyResults = await dataProvider.globalSearch("copy", ["deals"], 10);
+    const designResults = await dataProvider.globalSearch(
+      "design",
+      ["deals"],
+      10,
+    );
+
+    expect(copyResults.map((result) => result.content)).toEqual([
+      "copywriting · design · New logo",
+    ]);
+    expect(designResults.map((result) => result.title).sort()).toEqual([
+      "Acme rebrand",
+      "Design review",
+    ]);
   });
 });

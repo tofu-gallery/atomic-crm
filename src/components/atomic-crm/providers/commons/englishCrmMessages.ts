@@ -95,6 +95,10 @@ export const englishCrmMessages = {
         new: "New Contact",
         show: "Show contact",
       },
+      autocomplete: {
+        create_item: "Create %{item}",
+        create_label: "Start typing to create a new contact",
+      },
       background: {
         last_activity_on: "Last activity on %{date}",
         added_on: "Added on %{date}",
@@ -125,6 +129,9 @@ export const englishCrmMessages = {
       },
       list: {
         error_loading: "Error loading contacts",
+      },
+      show: {
+        error_loading: "Error loading contact",
       },
       bulk_tag: {
         action: "Tag",
@@ -183,7 +190,7 @@ export const englishCrmMessages = {
         description: "Description",
         company_id: "Company",
         contact_ids: "Contacts",
-        category: "Category",
+        categories: "Categories",
         amount: "Budget",
         expected_closing_date: "Expected closing date",
         stage: "Stage",
@@ -442,6 +449,7 @@ export const englishCrmMessages = {
       latest_activity_error: "Error loading latest activity",
       latest_notes: "My Latest Notes",
       latest_notes_added_ago: "added %{timeAgo}",
+      recent_contacts: "Recently Viewed",
       stepper: {
         install: "Install Atomic CRM",
         progress: "%{step}/3 done",

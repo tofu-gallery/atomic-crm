@@ -1,5 +1,6 @@
 import { supabaseDataProvider } from "ra-supabase-core";
 import {
+  HttpError,
   withLifecycleCallbacks,
   type DataProvider,
   type GetListParams,
@@ -20,6 +21,7 @@ import type {
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { ATTACHMENTS_BUCKET } from "../commons/attachments";
 import { getIsInitialized } from "./authProvider";
+import { searchDealCategories } from "./searchDealCategories";
 import { getSupabaseClient, supabasePublishableKey } from "./supabase";
 
 const getBaseDataProvider = () =>
@@ -284,14 +286,14 @@ const getDataProviderWithCustomMethods = () => {
       resources: readonly SearchResourceName[],
       maxResults: number,
     ): Promise<SearchResult[]> {
-      const { data, error } = await getSupabaseClient().rpc("global_search", {
-        query,
-        resources,
-        max_results: maxResults,
-      });
+      const { data, error, status } = await getSupabaseClient().rpc(
+        "global_search",
+        { query, resources, max_results: maxResults },
+      );
       if (error) {
         console.error("global_search.error", error);
-        throw new Error("Failed to search");
+        // the status lets authProvider.checkError log out an expired session
+        throw new HttpError("Failed to search", status, error);
       }
       return data ?? [];
     },
@@ -435,8 +437,12 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
   {
     resource: "deals",
-    beforeGetList: async (params) => {
-      return applyFullTextSearch(["name", "category", "description"])(params);
+    beforeGetList: async (params, dataProvider) => {
+      return searchDealCategories(
+        applyFullTextSearch(["name", "description"])(params),
+        params.filter?.q,
+        dataProvider,
+      );
     },
   },
 ];

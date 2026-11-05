@@ -98,6 +98,10 @@ export const frenchCrmMessages = {
         new: "Nouveau contact",
         show: "Afficher le contact",
       },
+      autocomplete: {
+        create_item: "Créer %{item}",
+        create_label: "Saisissez du texte pour créer un contact",
+      },
       background: {
         last_activity_on: "Dernière activité le %{date}",
         added_on: "Ajouté le %{date}",
@@ -128,6 +132,9 @@ export const frenchCrmMessages = {
       },
       list: {
         error_loading: "Erreur lors du chargement des contacts",
+      },
+      show: {
+        error_loading: "Erreur lors du chargement du contact",
       },
       bulk_tag: {
         action: "Étiqueter",
@@ -187,7 +194,7 @@ export const frenchCrmMessages = {
         description: "Description",
         company_id: "Entreprise",
         contact_ids: "Contacts",
-        category: "Catégorie",
+        categories: "Catégories",
         amount: "Budget",
         expected_closing_date: "Date de clôture prévue",
         stage: "Étape",
@@ -450,6 +457,7 @@ export const frenchCrmMessages = {
         "Erreur lors du chargement de la dernière activité",
       latest_notes: "Mes dernières notes",
       latest_notes_added_ago: "ajouté %{timeAgo}",
+      recent_contacts: "Consultés récemment",
       stepper: {
         install: "Installer Atomic CRM",
         progress: "%{step}/3 terminé",
