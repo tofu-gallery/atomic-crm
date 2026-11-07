@@ -560,10 +560,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/layout/MobileRefreshButton.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/layout/MobileNavigation.tsx",
           "type": "registry:component"
         },
@@ -885,6 +881,10 @@
         },
         {
           "path": "src/components/atomic-crm/companies/CompanyCreate.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/companies/CompanyContactsMobile.tsx",
           "type": "registry:component"
         },
         {
